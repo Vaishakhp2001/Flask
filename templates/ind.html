@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<title>Caricature Booth</title>
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+</head>
+
+<body>
+    <img src="static/chairman.png" alt="Caricature Photo Maker Online">
+    <div class="container">
+        <div class="main-display" style="padding-top: 15%; border: 1px solid #ccc; border-radius: 16px; box-shadow: 0 8px 16px 0 rgba(0,0,0,0.2), 0 6px 20px 0 rgba(0,0,0,0.19);">
+
+            <video id="webcam" autoplay playsinline class="active"
+                style="width: 720px; height: 640px; border: none; background: rgba(240, 240, 240, 0.1); border-radius: 16px; box-shadow: 0 8px 16px 0 rgba(0,0,0,0.2), 0 6px 20px 0 rgba(0,0,0,0.19);"></video>
+            <img id="capturedImage" src="" alt="Captured Image"
+                style="border-radius: 16px; border: none; background: rgba(240, 240, 240, 0.1); box-shadow: 0 8px 16px 0 rgba(0,0,0,0.2), 0 6px 20px 0 rgba(0,0,0,0.19);" />
+            <div style="position: relative; z-index: 1;">
+                <img id="generatedCaricature" src="" alt="Generated Caricature"
+                    style="border-radius: 16px; border: none; background: rgba(240, 240, 240, 0.1); box-shadow: 0 8px 16px 0 rgba(0,0,0,0.2), 0 6px 20px 0 rgba(0,0,0,0.19);" />
+                <div
+                    style="position: absolute; top: 50%;padding-left:10px; right: 0; transform: translateY(-50%); z-index: 10; display: flex; gap: 10px; flex-direction: column; align-items: center;">
+                    <button id="showQrCode" class="hidden"
+                        style="z-index: 11; background-color: transparent; border: none;">
+                        <img src="static/qr-icon.png"
+                            style="width: 80px; height: 80px; border-radius: 50%; cursor: pointer;" />
+                    </button>
+                    <button id="printCaricature" class="hidden"
+                        style="z-index: 11; background-color: transparent; border: none;">
+                        <img src="static/print.jpg"
+                            style="width: 80px; height: 80px; border-radius: 50%; cursor: pointer;" />
+                    </button>
+                </div>
+            </div>
+        </div>
+        <canvas id="canvas" width="700" height="600"></canvas>
+        <div
+            style="position: absolute; top: -12%; left: 2%; width: 100%; height: 100%; display: flex; justify-content: center; align-items: center; gap: 0px;">
+            <button id="capture"
+                style="width: 21.5%; height: 80%; font-family: 'Comic Sans MS', 'Comic Sans', cursive; font-size: 1.5em; color: rgba(255, 255, 255, 0); background-color: #ffffff00; border: none; border-radius: 4px; padding: 10px 20px; cursor: pointer; transition: all 0.3s ease-in-out;">
+                C
+            </button>
+            <div id="gender" style="display: none; justify-content: center; align-items: center; gap: 10px;">
+                <input type="radio" id="male" name="gender" value="male" checked>
+                <label for="male">Male</label>
+                <input type="radio" id="female" name="gender" value="female">
+                <label for="female">Female</label>
+            </div>
+            <button id="generate"
+                style="width: 21.5%; height: 80%; font-family: 'Comic Sans MS', 'Comic Sans', cursive; font-size: 1.5em; color: rgba(255, 255, 255, 0.7); background-color: #ffffff00; border: none; border-radius: 4px; padding: 10px 20px; cursor: pointer; transition: all 0.3s ease-in-out; z-index: 3;"
+                disabled>Generate Caricature</button>
+            <button id="newCaricature" class="hidden"
+                style="width: 21.5%; height: 80%; font-family: 'Comic Sans MS', 'Comic Sans', cursive; font-size: 1.5em; color: rgba(255, 255, 255, 0.7); background-color: #ffffff00; border: none; border-radius: 4px; padding: 10px 20px; cursor: pointer; transition: all 0.3s ease-in-out; z-index: 3;">New
+                Caricature</button>
+        </div>
+        <div id="loading" style="display: none;">
+            <p>Generating caricature... please wait</p>
+        </div>
+        <p id="status" style="display: none;"></p>
+        <div id="overlay">
+            <div>
+                <p class="countdown" id="countdownDisplay">5</p>
+                <img src="/static/loading.gif" alt="Loading" style="width: 50px; height: 50px;">
+            </div>
+        </div>
+    </div>
+</body>

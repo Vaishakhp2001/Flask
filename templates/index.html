@@ -1,0 +1,554 @@
+<!DOCTYPE html>
+<html lang="en" style="height: 100%">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Caricature Photobooth</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+    <style>
+        body {
+            font-family: sans-serif;
+            margin: 0;
+            padding: 0;
+            background-image: url('static/bg3.jpg');
+            background-size: cover;
+            background-position: center;
+            background-repeat: no-repeat;
+            color: #333;
+            height: 100%;
+            overflow: hidden;
+        }
+
+        .container {
+            width: 100%;
+            height: 100%;
+            margin: 0 auto;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            position: relative;
+        }
+
+        h1 {
+            text-align: center;
+            font-size: 3em;
+            margin-bottom: 20px;
+        }
+
+        .main-display {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            width: 100%;
+            height: auto;
+            margin-bottom: 20px;
+            position: relative;
+            background-color: #ffffff00;
+        }
+
+        .side-container {
+            position: relative;
+            width: 100px;
+            height: 100px;
+            background-color: #ffffff00;
+        }
+
+        .side-img {
+            width: 100px;
+            height: 100px;
+        }
+
+        #qrcode {
+            width: 100px;
+            height: 100px;
+            position: absolute;
+            top: 0;
+            left: 0;
+            display: none;
+        }
+
+        #status {
+            text-align: center;
+            margin-top: 20px;
+        }
+
+        #capturedImage,
+        #generatedCaricature,
+        video {
+            width: 540px;
+            height: 960px;
+            object-fit: contain;
+            display: none;
+            background-color: #ffffff3e;
+        }
+
+        #capturedImage,
+        video {
+            transform: rotate(90deg);
+        }
+
+        #capturedImage.active,
+        #generatedCaricature.active,
+        video.active {
+            display: block;
+        }
+
+        #loading {
+            display: none;
+            text-align: center;
+            margin-top: 10px;
+        }
+
+        #loading img {
+            width: 50px;
+            height: 50px;
+        }
+
+        canvas {
+            display: none;
+        }
+
+        #overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.5);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 999;
+        }
+
+        .countdown {
+            font-size: 5em;
+            color: white;
+        }
+
+        .hidden {
+            display: none;
+        }
+
+        #capture:hover,
+        #generate:hover,
+        #newCaricature:hover {
+            color: #de0f0f;
+        }
+    </style>
+</head>
+
+<body>
+    <img src="static/chairman.png"
+        style="width:auto; height: 15%; display: block; margin: 0 auto;" alt="Caricature Photo Maker Online">
+    <div class="container">
+        <input type="hidden" id="styleImageUrl" value="1" />
+        <div class="main-display" style="padding-top: 15%; border: 1px solid #ccc; border-radius: 16px; box-shadow: 0 8px 16px 0 rgba(0,0,0,0.2), 0 6px 20px 0 rgba(0,0,0,0.19);">
+            <div class="side-container" id="side-container">
+                <div id="qrcode"></div>
+            </div>
+            <video id="webcam" autoplay playsinline class="active"
+                style="width: 720px; height: 640px; border: none; background: rgba(240, 240, 240, 0.1); border-radius: 16px; box-shadow: 0 8px 16px 0 rgba(0,0,0,0.2), 0 6px 20px 0 rgba(0,0,0,0.19);"></video>
+            <img id="capturedImage" src="" alt="Captured Image"
+                style="border-radius: 16px; border: none; background: rgba(240, 240, 240, 0.1); box-shadow: 0 8px 16px 0 rgba(0,0,0,0.2), 0 6px 20px 0 rgba(0,0,0,0.19);" />
+            <div style="position: relative; z-index: 1;">
+                <img id="generatedCaricature" src="" alt="Generated Caricature"
+                    style="border-radius: 16px; border: none; background: rgba(240, 240, 240, 0.1); box-shadow: 0 8px 16px 0 rgba(0,0,0,0.2), 0 6px 20px 0 rgba(0,0,0,0.19);" />
+                <div
+                    style="position: absolute; top: 50%;padding-left:10px; right: 0; transform: translateY(-50%); z-index: 10; display: flex; gap: 10px; flex-direction: column; align-items: center;">
+                    <button id="showQrCode" class="hidden"
+                        style="z-index: 11; background-color: transparent; border: none;">
+                        <img src="static/qr-icon.png"
+                            style="width: 80px; height: 80px; border-radius: 50%; cursor: pointer;" />
+                    </button>
+                    <button id="printCaricature" class="hidden"
+                        style="z-index: 11; background-color: transparent; border: none;">
+                        <img src="static/print.jpg"
+                            style="width: 80px; height: 80px; border-radius: 50%; cursor: pointer;" />
+                    </button>
+                </div>
+            </div>
+        </div>
+        <canvas id="canvas" width="700" height="600"></canvas>
+        <div
+            style="position: absolute; top: -12%; left: 2%; width: 100%; height: 100%; display: flex; justify-content: center; align-items: center; gap: 0px;">
+            <button id="capture"
+                style="width: 21.5%; height: 80%; font-family: 'Comic Sans MS', 'Comic Sans', cursive; font-size: 1.5em; color: rgba(255, 255, 255, 0); background-color: #ffffff00; border: none; border-radius: 4px; padding: 10px 20px; cursor: pointer; transition: all 0.3s ease-in-out;">
+                C
+            </button>
+            <div id="gender" style="display: none; justify-content: center; align-items: center; gap: 10px;">
+                <input type="radio" id="male" name="gender" value="male" checked>
+                <label for="male">Male</label>
+                <input type="radio" id="female" name="gender" value="female">
+                <label for="female">Female</label>
+            </div>        
+                <button id="generate"
+                style="width: 21.5%; height: 80%; font-family: 'Comic Sans MS', 'Comic Sans', cursive; font-size: 1.5em; color: rgba(255, 255, 255, 0.7); background-color: #ffffff00; border: none; border-radius: 4px; padding: 10px 20px; cursor: pointer; transition: all 0.3s ease-in-out; z-index: 3;"
+                disabled>Generate Caricature</button>
+            <button id="newCaricature" class="hidden"
+                style="width: 21.5%; height: 80%; font-family: 'Comic Sans MS', 'Comic Sans', cursive; font-size: 1.5em; color: rgba(255, 255, 255, 0.7); background-color: #ffffff00; border: none; border-radius: 4px; padding: 10px 20px; cursor: pointer; transition: all 0.3s ease-in-out; z-index: 3;">New
+                Caricature</button>
+
+        </div>
+
+        <div id="loading" style="display: none;">
+            <p>Generating caricature... please wait</p>
+        </div>
+
+        <p id="status" style="display: none;"></p>
+
+        
+        <div id="overlay">
+            <div>
+                <p class="countdown" id="countdownDisplay">5</p>
+                <img src="/static/loading.gif" alt="Loading" style="width: 50px; height: 50px;">
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const webcamElement = document.getElementById('webcam');
+        const canvasElement = document.getElementById('canvas');
+        const capturedImageElement = document.getElementById('capturedImage');
+        const generatedCaricatureElement = document.getElementById('generatedCaricature');
+        const captureButton = document.getElementById('capture');
+        const generateButton = document.getElementById('generate');
+        const statusElement = document.getElementById('status');
+        const qrCodeContainer = document.getElementById('qrcode');
+        const loadingElement = document.getElementById('loading');
+        const sideImgLeft = document.getElementById('side-img-left');
+        const overlay = document.getElementById('overlay');
+        const countdownDisplay = document.getElementById('countdownDisplay');
+        const newCaricatureButton = document.getElementById('newCaricature');
+        const sideContainer = document.getElementById('side-container');
+        const genderElement = document.getElementById('gender');
+        let resultUrl = '';
+        newCaricatureButton.style.display = 'none';
+        generateButton.style.display = 'none';
+        let isGeneratedOnce = false;
+        let change_button=false;
+        const constraints = {
+            video: true
+        };
+
+        navigator.mediaDevices.getUserMedia(constraints).then((stream) => {
+            webcamElement.srcObject = stream;
+        });
+
+        function startCountdown(seconds, callback) {
+            let countdown = seconds;
+            countdownDisplay.textContent = countdown;
+            const interval = setInterval(() => {
+                countdown--;
+                countdownDisplay.textContent = countdown;
+                if (countdown <= 0) {
+                    clearInterval(interval);
+                    callback();
+                    const flash = document.createElement('div');
+                    flash.style.position = 'fixed';
+                    flash.style.top = '0';
+                    flash.style.right = '0';
+                    flash.style.bottom = '0';
+                    flash.style.left = '0';
+                    flash.style.backgroundColor = 'white';
+                    document.body.appendChild(flash);
+                    setTimeout(() => {
+                        document.body.removeChild(flash);
+                    }, 1000);
+                }
+                
+            }, 1000);
+        }
+
+        captureButton.addEventListener('click', () => {
+            overlay.style.display = 'flex';
+            loadingElement.firstChild.src = 'static/camera.gif';
+            setTimeout(() => {
+                console.error('Capture button pressed');
+                loadingElement.firstChild.src = 'static/loading.gif';
+            }, 2000);
+            
+            
+            console.error('Capture button pressed');
+            capturedImageElement.classList.remove('active');
+            webcamElement.classList.add('active');
+            startCountdown(5, () => {
+                const context = canvasElement.getContext('2d');
+                context.drawImage(webcamElement, 0, 0, canvasElement.width, canvasElement.height);
+                const imageDataURL = canvasElement.toDataURL('image/jpeg');
+                capturedImageElement.src = imageDataURL;
+
+                webcamElement.classList.remove('active');
+                capturedImageElement.classList.add('active');
+                overlay.style.display = 'none'; 
+
+                generateButton.style.display = 'flex';
+                generateButton.style.backgroundColor = 'rgba(40, 167, 69, 0.5)';
+                generateButton.style.color = '#fff';
+                generateButton.style.border = 'none';
+                generateButton.style.borderRadius = '10px';
+                generateButton.style.padding = '10px 20px';
+                generateButton.style.cursor = 'pointer';
+                generateButton.style.height = '80px';
+                generateButton.style.width = '260px';
+                generateButton.style.position = 'fixed';
+                generateButton.style.bottom = '35px';
+                generateButton.style.boxShadow = '0 8px 16px 0 rgba(0,0,0,0.2), 0 6px 20px 0 rgba(0,0,0,0.19)';
+                generateButton.style.transition = 'all 0.3s ease-in-out';
+                generateButton.disabled = false;
+
+                genderElement.style.display = 'flex';
+                genderElement.style.backgroundColor = 'rgba(40, 167, 69, 0.5)';
+                genderElement.style.color = '#fff';
+                genderElement.style.border = 'none';
+                genderElement.style.borderRadius = '10px';
+                genderElement.style.padding = '10px 20px';
+                genderElement.style.cursor = 'pointer';
+                genderElement.style.height = '80px';
+                genderElement.style.width = '260px';
+                genderElement.style.position = 'fixed';
+                genderElement.style.bottom = '70px';
+                genderElement.style.boxShadow = '0 8px 16px 0 rgba(0,0,0,0.2), 0 6px 20px 0 rgba(0,0,0,0.19)';
+                genderElement.style.transition = 'all 0.3s ease-in-out';
+
+                captureButton.style.position = 'flex';
+                captureButton.style.transform = 'translate(80%, -31%)';
+                captureButton.style.zIndex = '11';
+                captureButton.textContent = 'X';
+            });
+        });
+
+        function dataURLToBlob(dataURL) {
+            const parts = dataURL.split(',');
+            const mimeType = parts[0].match(/:(.*?);/)[1];
+            const byteString = atob(parts[1]);
+            const arrayBuffer = new ArrayBuffer(byteString.length);
+            const uint8Array = new Uint8Array(arrayBuffer);
+
+            for (let i = 0; i < byteString.length; i++) {
+                uint8Array[i] = byteString.charCodeAt(i);
+            }
+
+            return new Blob([uint8Array], { type: mimeType });
+        }
+
+        generateButton.addEventListener('click', () => {
+            if (isGeneratedOnce) return;
+            isGeneratedOnce = true;
+            console.log('generate button pressed');
+            const imageDataURL = capturedImageElement.src;
+
+            if (!imageDataURL) {
+                statusElement.textContent = 'Please capture an image first!';
+                return;
+            }
+
+            const blob = dataURLToBlob(imageDataURL);
+
+            const formData = new FormData();
+            formData.append('imageFile', blob, 'captured_image.jpg');
+            formData.append('gender', genderElement.textContent);
+            countdownDisplay.style.display = 'none';
+            loadingElement.style.display = 'block'; 
+            generateButton.classList.add('hidden');
+            captureButton.classList.add('hidden');
+
+            overlay.style.display = 'flex'; 
+            fetch('/upload_image', {
+                method: 'POST',
+                body: formData
+            })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.status === 'success') {
+                        const imageUrl = data.imageUrl;
+                        generateCaricature(imageUrl);
+                        generateButton.textContent = 'New Caricature';
+                        generateButton.disabled = false;
+                        change_button=true;
+                        
+                    } else {
+                        statusElement.textContent = `Error: ${data.message}. Contact Photobooth authority.`;
+                        loadingElement.style.display = 'none';
+                        overlay.style.display = 'none'; 
+                        generateButton.style.display = 'none'; 
+                    }
+                })
+                .catch(err => {
+                    statusElement.textContent = `Error: ${err}. Contact Photobooth authority.`;
+                    loadingElement.style.display = 'none'; 
+                    overlay.style.display = 'none';
+                });
+        });
+
+        function generateCaricature(imageUrl) {
+            const formData = new FormData();
+            formData.append('imageUrl', imageUrl);
+            formData.append('styleImageUrl', template);
+
+            fetch('/generate_caricature', {
+                method: 'POST',
+                body: formData
+            })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.status === 'processing') {
+                        statusElement.textContent = `Processing... Order ID: ${data.orderId}`;
+                        startPolling(data.orderId);
+                    } else {
+                        statusElement.textContent = `Error: ${data.message}. Contact Photobooth authority.`;
+                        loadingElement.style.display = 'none'; 
+                        overlay.style.display = 'none'; 
+                    }
+                })
+                .catch(err => {
+                    statusElement.textContent = `Error: ${err}. Contact Photobooth authority.`;
+                    loadingElement.style.display = 'none';
+                    overlay.style.display = 'none';
+                });
+        }
+
+
+        function startPolling(orderId) {
+
+            fetch(`/check_status/${orderId}`)
+                .then(response => response.json())
+                .then(statusData => {
+                    if (statusData.status === 'active') {
+
+                        resultUrl = statusData.output;
+                        statusElement.textContent = 'Caricature ready!';
+
+                        
+                        capturedImageElement.classList.remove('active');
+                        
+                        const generatedCaricatureImg = document.getElementById('generatedCaricature');
+                        generatedCaricatureImg.src = resultUrl;
+                        
+                        generatedCaricatureElement.classList.add('active');
+                        loadingElement.style.display = 'none';
+                        qrCodeContainer.innerHTML = '';
+                        qrCodeContainer.style.display = 'none'; 
+                        new QRCode(qrCodeContainer, {
+                            text: resultUrl,
+                            width: 720,
+                            height: 720,
+                            style: {
+                                position: 'absolute',
+                                left: '50%',
+                                top: '50%',
+                                transform: 'translate(-50%, -50%)'
+                            }
+                        });
+                        console.log(`Result URL: ${resultUrl}`);
+                        document.getElementById('showQrCode').classList.remove('hidden');
+                        document.getElementById('printCaricature').classList.remove('hidden');
+                        newCaricatureButton.classList.remove('hidden');
+                        sideImgLeft.style.display = 'none';  
+                       
+                        fetch(resultUrl)
+                            .then(response => response.blob())
+                            .then(blob => {
+                                const url = window.URL.createObjectURL(blob);
+                                const link = document.createElement('a');
+                                link.href = url;
+                                link.download = `cartoons/caricature_${orderId}.jpg`;
+                                link.click();
+                                window.URL.revokeObjectURL(url);
+                                const image = document.createElement('img');
+                                image.src = url;
+                                image.alt = `Generated Caricature for order ID ${orderId}`;
+                                generatedCaricatureElement.innerHTML = '';
+                                generatedCaricatureElement.appendChild(image);
+                            });
+                        loadingElement.style.display = 'none'; 
+                        overlay.style.display = 'none'; 
+
+                        
+                        function printGeneratedCaricature() {
+                            const generatedCaricatureImg = document.getElementById('generatedCaricature');
+                            const bodyContent = document.body.innerHTML; 
+                            
+                            document.body.innerHTML = `<img src="${generatedCaricatureImg.src}" style="width:100%; height:auto;">`;
+
+                            window.print(); 
+
+                            
+                            document.body.innerHTML = bodyContent;
+                        }
+                        
+                        document.getElementById('printCaricature').addEventListener('click', printGeneratedCaricature);
+
+                        
+                        setTimeout(() => {
+                            location.reload();
+                        }, 50000);
+                    } else {
+                        statusElement.textContent = 'Still processing...';
+                    }
+                })
+                .catch(err => {
+                   
+                    statusElement.textContent = `Error: ${err}. Contact Photobooth authority.`;
+                    loadingElement.style.display = 'none'; 
+                    overlay.style.display = 'none'; 
+                });
+
+            document.getElementById('showQrCode').addEventListener('click', () => {
+                qrCodeContainer.style.display = 'flex'; 
+                showQrCodeInNewWindow();
+                console.log(` URL: ${resultUrl}`);
+            }); 
+        }
+
+        function showQrCodeInNewWindow() {
+            const qrCodeWindow = window.open("", "QR Code", "width=800,height=800,top=" + (screen.height / 2 - 400) + ",left=" + (screen.width / 2 - 400));
+            qrCodeWindow.document.write("<div style='display: flex; justify-content: center; align-items: center; height: 100vh;'><div id='qrCodeContainer'></div></div>");
+            new QRCode(qrCodeWindow.document.getElementById('qrCodeContainer'), {
+                text: resultUrl,
+                width: 720,
+                height: 720,
+                style: {
+                    position: 'absolute',
+                    left: '50%',
+                    top: '50%',
+                    transform: 'translate(-50%, -50%)',
+                    zIndex: '199'
+                }
+            });
+            document.addEventListener('click', () => qrCodeContainer.style.display = 'none');
+        }
+
+
+       
+        document.addEventListener('click', () => qrCodeContainer.style.display = 'none');
+
+        document.getElementById('printCaricature').addEventListener('click', () => {
+            const generatedCaricatureImg = document.getElementById('generatedCaricature');
+            const bodyContent = document.body.innerHTML;  
+
+          
+            document.body.innerHTML = `<img src="${generatedCaricatureImg.src}" style="width:100%; height:auto;">`;
+
+            window.print();  
+
+           
+            document.body.innerHTML = bodyContent;
+
+        });
+
+
+
+        generateButton.addEventListener('click', () => {
+
+            if (change_button) { 
+                location.reload(); 
+                change_button=false;
+            }
+        });
+
+    </script>
+</body>
+
+</html>
+
